@@ -1,0 +1,42 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        shell: cmd
+        run: call build.cmd
+
+      - name: Check output
+        shell: pwsh
+        run: |
+          if (-not (Test-Path MonitorSaver.exe)) { throw "MonitorSaver.exe was not produced" }
+          Get-Item MonitorSaver.exe | Format-List Name, Length, LastWriteTime
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MonitorSaver
+          path: |
+            MonitorSaver.exe
+            README.md
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: MonitorSaver.exe
+          generate_release_notes: true
